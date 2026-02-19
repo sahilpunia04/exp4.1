@@ -3,7 +3,7 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// In-memory storage (NO fs)
+// In-memory storage
 let employees = [];
 
 // Generate random ID
@@ -11,17 +11,19 @@ function generateId() {
   return Math.floor(Math.random() * 1000000000);
 }
 
+/* ================= ROUTES ================= */
+
 // Home
 app.get("/", (req, res) => {
   res.json({ message: "Employee Management System API Running" });
 });
 
-// Get All Employees
+// Get all employees
 app.get("/employees", (req, res) => {
   res.json(employees);
 });
 
-// Add Employee
+// Add employee
 app.post("/employees", (req, res) => {
   const { name, position, salary } = req.body;
 
@@ -37,11 +39,10 @@ app.post("/employees", (req, res) => {
   };
 
   employees.push(newEmployee);
-
   res.status(201).json(newEmployee);
 });
 
-// Update Employee
+// Update employee
 app.put("/employees/:id", (req, res) => {
   const { id } = req.params;
   const { name, position, salary } = req.body;
@@ -63,7 +64,7 @@ app.put("/employees/:id", (req, res) => {
   res.json({ message: "Employee updated successfully", employee });
 });
 
-// Delete Employee
+// Delete employee
 app.delete("/employees/:id", (req, res) => {
   const { id } = req.params;
 
@@ -73,9 +74,50 @@ app.delete("/employees/:id", (req, res) => {
     return res.status(404).json({ error: "Employee not found" });
   }
 
-  employees.splice(index, 1);
-
-  res.json({ message: "Employee deleted successfully" });
+  const deleted = employees.splice(index, 1)[0];
+  res.json({ message: "Employee deleted successfully", deleted });
 });
+
+// ================= TEST-ALL ROUTE =================
+app.get("/test-all", (req, res) => {
+  const results = {};
+
+  // 1️⃣ Add employee
+  const testEmployee = {
+    id: generateId(),
+    name: "Test User",
+    position: "Tester",
+    salary: 40000,
+  };
+  employees.push(testEmployee);
+  results.added = testEmployee;
+
+  // 2️⃣ Get all employees
+  results.list = [...employees]; // copy array to show current state
+
+  // 3️⃣ Update the test employee
+  testEmployee.name = "Updated User";
+  testEmployee.position = "Senior Tester";
+  testEmployee.salary = 45000;
+  results.updated = testEmployee;
+
+  // 4️⃣ Delete the test employee
+  const index = employees.findIndex(emp => emp.id === testEmployee.id);
+  const deleted = employees.splice(index, 1)[0];
+  results.deleted = deleted;
+
+  // 5️⃣ List remaining employees
+  results.remaining = [...employees];
+
+  res.json(results);
+});
+
+/* ================= SERVER SETUP ================= */
+if (require.main === module) {
+  const PORT = 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
 
 module.exports = app;
