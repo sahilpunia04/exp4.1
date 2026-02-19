@@ -1,0 +1,20 @@
+[
+  {
+    "id": 45937089,
+    "name": "Sahil",
+    "position": "Manager",
+    "salary": 70000
+  },
+  {
+    "id": 638603807,
+    "name": "Sukh",
+    "position": "Junior Engineer",
+    "salary": 30000
+  },
+  {
+    "id": 661971141,
+    "name": "Rahul",
+    "position": "HR",
+    "salary": 50000
+  }
+]
