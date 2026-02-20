@@ -1,123 +1,138 @@
-const express = require("express");
+const fs = require("fs");
+const readline = require("readline");
 
-const app = express();
-app.use(express.json());
+const FILE = "employees.json";
 
-// In-memory storage
-let employees = [];
-
-// Generate random ID
-function generateId() {
-  return Math.floor(Math.random() * 1000000000);
+// Load employees from file
+function loadEmployees() {
+  if (!fs.existsSync(FILE)) {
+    fs.writeFileSync(FILE, JSON.stringify([]));
+  }
+  const data = fs.readFileSync(FILE);
+  return JSON.parse(data);
 }
 
-/* ================= ROUTES ================= */
+// Save employees to file
+function saveEmployees(employees) {
+  fs.writeFileSync(FILE, JSON.stringify(employees, null, 2));
+}
 
-// Home
-app.get("/", (req, res) => {
-  res.json({ message: "Employee Management System API Running" });
+let employees = loadEmployees();
+
+function generateId() {
+  return Math.floor(Math.random() * 1000000);
+}
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
 });
 
-// Get all employees
-app.get("/employees", (req, res) => {
-  res.json(employees);
-});
+function menu() {
+  console.log("\n=== Employee Management System ===");
+  console.log("1. Add Employee");
+  console.log("2. View Employees");
+  console.log("3. Update Employee");
+  console.log("4. Delete Employee");
+  console.log("5. Exit");
 
-// Add employee
-app.post("/employees", (req, res) => {
-  const { name, position, salary } = req.body;
-
-  if (!name || !position || !salary || isNaN(salary) || salary <= 0) {
-    return res.status(400).json({ error: "Invalid input data" });
-  }
-
-  const newEmployee = {
-    id: generateId(),
-    name,
-    position,
-    salary: Number(salary),
-  };
-
-  employees.push(newEmployee);
-  res.status(201).json(newEmployee);
-});
-
-// Update employee
-app.put("/employees/:id", (req, res) => {
-  const { id } = req.params;
-  const { name, position, salary } = req.body;
-
-  const employee = employees.find((emp) => emp.id == id);
-
-  if (!employee) {
-    return res.status(404).json({ error: "Employee not found" });
-  }
-
-  if (!name || !position || !salary || isNaN(salary) || salary <= 0) {
-    return res.status(400).json({ error: "Invalid input data" });
-  }
-
-  employee.name = name;
-  employee.position = position;
-  employee.salary = Number(salary);
-
-  res.json({ message: "Employee updated successfully", employee });
-});
-
-// Delete employee
-app.delete("/employees/:id", (req, res) => {
-  const { id } = req.params;
-
-  const index = employees.findIndex((emp) => emp.id == id);
-
-  if (index === -1) {
-    return res.status(404).json({ error: "Employee not found" });
-  }
-
-  const deleted = employees.splice(index, 1)[0];
-  res.json({ message: "Employee deleted successfully", deleted });
-});
-
-// ================= TEST-ALL ROUTE =================
-app.get("/test-all", (req, res) => {
-  const results = {};
-
-  // 1️⃣ Add employee
-  const testEmployee = {
-    id: generateId(),
-    name: "Test User",
-    position: "Tester",
-    salary: 40000,
-  };
-  employees.push(testEmployee);
-  results.added = testEmployee;
-
-  // 2️⃣ Get all employees
-  results.list = [...employees]; // copy array to show current state
-
-  // 3️⃣ Update the test employee
-  testEmployee.name = "Updated User";
-  testEmployee.position = "Senior Tester";
-  testEmployee.salary = 45000;
-  results.updated = testEmployee;
-
-  // 4️⃣ Delete the test employee
-  const index = employees.findIndex(emp => emp.id === testEmployee.id);
-  const deleted = employees.splice(index, 1)[0];
-  results.deleted = deleted;
-
-  // 5️⃣ List remaining employees
-  results.remaining = [...employees];
-
-  res.json(results);
-});
-
-/* ================= SERVER SETUP ================= */
-if (require.main === module) {
-  const PORT = 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  rl.question("Choose an option: ", (choice) => {
+    switch (choice) {
+      case "1":
+        addEmployee();
+        break;
+      case "2":
+        viewEmployees();
+        break;
+      case "3":
+        updateEmployee();
+        break;
+      case "4":
+        deleteEmployee();
+        break;
+      case "5":
+        rl.close();
+        break;
+      default:
+        console.log("Invalid choice!");
+        menu();
+    }
   });
 }
 
-module.exports = app;
+function addEmployee() {
+  rl.question("Enter Name: ", (name) => {
+    rl.question("Enter Position: ", (position) => {
+      rl.question("Enter Salary: ", (salary) => {
+        if (!name || !position || isNaN(salary) || salary <= 0) {
+          console.log("Invalid input!");
+          return menu();
+        }
+
+        const newEmployee = {
+          id: generateId(),
+          name,
+          position,
+          salary: Number(salary)
+        };
+
+        employees.push(newEmployee);
+        saveEmployees(employees);
+        console.log("Employee added successfully!");
+        menu();
+      });
+    });
+  });
+}
+
+function viewEmployees() {
+  console.log("\nEmployee List:");
+  console.table(employees);
+  menu();
+}
+
+function updateEmployee() {
+  rl.question("Enter Employee ID to update: ", (id) => {
+    const emp = employees.find(e => e.id == id);
+    if (!emp) {
+      console.log("Employee not found!");
+      return menu();
+    }
+
+    rl.question("Enter New Name: ", (name) => {
+      rl.question("Enter New Position: ", (position) => {
+        rl.question("Enter New Salary: ", (salary) => {
+          if (!name || !position || isNaN(salary) || salary <= 0) {
+            console.log("Invalid input!");
+            return menu();
+          }
+
+          emp.name = name;
+          emp.position = position;
+          emp.salary = Number(salary);
+
+          saveEmployees(employees);
+          console.log("Employee updated successfully!");
+          menu();
+        });
+      });
+    });
+  });
+}
+
+function deleteEmployee() {
+  rl.question("Enter Employee ID to delete: ", (id) => {
+    const index = employees.findIndex(e => e.id == id);
+    if (index === -1) {
+      console.log("Employee not found!");
+      return menu();
+    }
+
+    employees.splice(index, 1);
+    saveEmployees(employees);
+    console.log("Employee deleted successfully!");
+    menu();
+  });
+}
+
+menu();
