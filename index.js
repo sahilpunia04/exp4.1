@@ -1,138 +1,51 @@
+const express = require("express");
 const fs = require("fs");
-const readline = require("readline");
+
+const app = express();
+app.use(express.json());
 
 const FILE = "employees.json";
 
-// Load employees from file
 function loadEmployees() {
   if (!fs.existsSync(FILE)) {
     fs.writeFileSync(FILE, JSON.stringify([]));
   }
-  const data = fs.readFileSync(FILE);
-  return JSON.parse(data);
+  return JSON.parse(fs.readFileSync(FILE));
 }
 
-// Save employees to file
-function saveEmployees(employees) {
-  fs.writeFileSync(FILE, JSON.stringify(employees, null, 2));
+function saveEmployees(data) {
+  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
 }
 
-let employees = loadEmployees();
-
-function generateId() {
-  return Math.floor(Math.random() * 1000000);
-}
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
+app.get("/", (req, res) => {
+  res.json({ message: "Employee Management System Running 🚀" });
 });
 
-function menu() {
-  console.log("\n=== Employee Management System ===");
-  console.log("1. Add Employee");
-  console.log("2. View Employees");
-  console.log("3. Update Employee");
-  console.log("4. Delete Employee");
-  console.log("5. Exit");
+app.get("/employees", (req, res) => {
+  res.json(loadEmployees());
+});
 
-  rl.question("Choose an option: ", (choice) => {
-    switch (choice) {
-      case "1":
-        addEmployee();
-        break;
-      case "2":
-        viewEmployees();
-        break;
-      case "3":
-        updateEmployee();
-        break;
-      case "4":
-        deleteEmployee();
-        break;
-      case "5":
-        rl.close();
-        break;
-      default:
-        console.log("Invalid choice!");
-        menu();
-    }
-  });
-}
+app.post("/employees", (req, res) => {
+  const { name, position, salary } = req.body;
 
-function addEmployee() {
-  rl.question("Enter Name: ", (name) => {
-    rl.question("Enter Position: ", (position) => {
-      rl.question("Enter Salary: ", (salary) => {
-        if (!name || !position || isNaN(salary) || salary <= 0) {
-          console.log("Invalid input!");
-          return menu();
-        }
+  if (!name || !position || isNaN(salary) || salary <= 0) {
+    return res.status(400).json({ error: "Invalid input" });
+  }
 
-        const newEmployee = {
-          id: generateId(),
-          name,
-          position,
-          salary: Number(salary)
-        };
+  const employees = loadEmployees();
 
-        employees.push(newEmployee);
-        saveEmployees(employees);
-        console.log("Employee added successfully!");
-        menu();
-      });
-    });
-  });
-}
+  const newEmployee = {
+    id: Math.floor(Math.random() * 1000000),
+    name,
+    position,
+    salary: Number(salary)
+  };
 
-function viewEmployees() {
-  console.log("\nEmployee List:");
-  console.table(employees);
-  menu();
-}
+  employees.push(newEmployee);
+  saveEmployees(employees);
 
-function updateEmployee() {
-  rl.question("Enter Employee ID to update: ", (id) => {
-    const emp = employees.find(e => e.id == id);
-    if (!emp) {
-      console.log("Employee not found!");
-      return menu();
-    }
+  res.status(201).json(newEmployee);
+});
 
-    rl.question("Enter New Name: ", (name) => {
-      rl.question("Enter New Position: ", (position) => {
-        rl.question("Enter New Salary: ", (salary) => {
-          if (!name || !position || isNaN(salary) || salary <= 0) {
-            console.log("Invalid input!");
-            return menu();
-          }
-
-          emp.name = name;
-          emp.position = position;
-          emp.salary = Number(salary);
-
-          saveEmployees(employees);
-          console.log("Employee updated successfully!");
-          menu();
-        });
-      });
-    });
-  });
-}
-
-function deleteEmployee() {
-  rl.question("Enter Employee ID to delete: ", (id) => {
-    const index = employees.findIndex(e => e.id == id);
-    if (index === -1) {
-      console.log("Employee not found!");
-      return menu();
-    }
-
-    employees.splice(index, 1);
-    saveEmployees(employees);
-    console.log("Employee deleted successfully!");
-    menu();
-  });
-}
-
-menu();
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
